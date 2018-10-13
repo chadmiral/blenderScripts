@@ -36,18 +36,48 @@ def generateDNA():
         
     return dnaSeq
 
+def selectFace():
+    print("selectFace")
+    
+def selectVertex():
+    print("selectVertex")
+
+def selectEdge():
+    print("selectEdge")
+    
+def deselectAll():
+    print("deselectAll")
+    
+def moveSelection():
+    print("moveSelection")
+
+def rotateSelection():
+    print("rotateSelection")
+    
+def extrudeSelection():
+    print("extrudeSelection")
+
 def executeMeshInstruction(bm, instruction):
     print("executeMeshInstruction")
-    #x = instruction.operation
-    result = {
-        MeshOperation.SELECT_FACE: lambda x: print("SELECT_FACE"),
-        MeshOperation.SELECT_VERTEX: lambda x: print("SELECT_VERTEX"),
-        MeshOperation.SELECT_EDGE: lambda x: print("SELECT_EDGE"),
-        MeshOperation.DESELECT_ALL: lambda x: print("DESELECT_ALL"),
-        MeshOperation.MOVE_SELECTION: lambda x: print("MOVE_SELECTION"),
-        MeshOperation.ROTATE_SELECTION: lambda x: print("ROTATE_SELECTION"),
-        MeshOperation.EXTRUDE_SELECTION: lambda x: print("EXTRUDE")
-    } [value](x)
+
+    op = instruction.operation
+    if op == MeshOperation.SELECT_FACE:
+        selectFace()
+    elif op == MeshOperation.SELECT_VERTEX:
+        selectVertex()
+    elif op == MeshOperation.SELECT_EDGE:
+        selectEdge()
+    elif op == MeshOperation.DESELECT_ALL:
+        deselectAll()
+    elif op == MeshOperation.MOVE_SELECTION:
+        moveSelection()
+    elif op == MeshOperation.ROTATE_SELECTION:
+        rotateSelection()
+    elif op == MeshOpeartion.EXTRUDE_SELECTION:
+        extrudeSelection()
+    else:
+        print("Invalid operation!")
+        
         
 def main():
     # Get the active mesh
