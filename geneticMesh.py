@@ -4,14 +4,12 @@ from enum import Enum
 import random
 
 class MeshOperation(Enum):
-    SELECT_FACE = 1,
-    SELECT_VERTEX = 2,
-    SELECT_EDGE = 3,
-    
-    DESELECT_ALL = 4,
-    
-    MOVE_SELECTION = 5,
-    ROTATE_SELECTION = 6,
+    SELECT_FACE = 1
+    SELECT_VERTEX = 2
+    SELECT_EDGE = 3
+    DESELECT_ALL = 4
+    MOVE_SELECTION = 5
+    ROTATE_SELECTION = 6
     EXTRUDE_SELECTION = 7
     
 class MeshInstruction:
@@ -24,17 +22,6 @@ class MeshDNA:
     
     def __init__(self, meshInstruction):
         self.instructions.append(meshInstruction)
-
-# generate a random-length dna sequence of mesh instructions
-def generateDNA():
-    dnaSeq = MeshDNA(MeshInstruction(DESELECT_ALL))
-    sequenceLength = random.randint(4, 10)
-    for i in sequenceLength:
-        mo = MeshOperation(random.randint(1, 6))
-        mi = MeshInstruction(mo, 0)
-        dnaSeq.program.append(mi)
-        
-    return dnaSeq
 
 def selectFace():
     print("selectFace")
@@ -78,6 +65,17 @@ def executeMeshInstruction(bm, instruction):
     else:
         print("Invalid operation!")
         
+# generate a random-length dna sequence of mesh instructions
+def generateDNA():
+    dnaSeq = MeshDNA(MeshInstruction(MeshOperation.DESELECT_ALL, 0))
+    sequenceLength = random.randint(4, 10)
+    for i in range(0, sequenceLength):
+        opID = random.randint(1, 6)
+        mo = MeshOperation(opID)
+        mi = MeshInstruction(mo, 0)
+        dnaSeq.instructions.append(mi)
+        
+    return dnaSeq
         
 def main():
     # Get the active mesh
@@ -87,8 +85,9 @@ def main():
     bm = bmesh.new()   # create an empty BMesh
     bm.from_mesh(me)   # fill it in from a Mesh
     
-    instruction = MeshInstruction(MeshOperation.SELECT_FACE, 3)
-    dna = MeshDNA(instruction)
+    #instruction = MeshInstruction(MeshOperation.SELECT_FACE, 3)
+    #dna = MeshDNA(instruction)
+    dna = generateDNA()
     
     # loop through each instruction in the dna sequence
     for i in dna.instructions:
