@@ -5,9 +5,12 @@ import bpy
 from bpy_extras.io_utils import ExportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty
 from bpy.types import Operator
+from addon_utils import check, paths, enable # to use existing fbx exporter addon
 
 from collections import defaultdict
 import numpy as np
+
+import os
 
 # there's gotta be a built-in way to do this w/ numpy I havent found yet
 def remap(value, low1, high1, low2, high2):
@@ -40,7 +43,7 @@ def expand_aabb(xyz):
 
 
 # write offset data to a texture and save to disk
-def writeOffsetTexture(offsets, round_up = True):
+def writeOffsetTexture(offsets, file_path, round_up = True):
     w = next_power_of_2(offsets.shape[0]) if round_up else offset.shape[0]
     h = offsets.shape[1]
     
@@ -67,14 +70,30 @@ def writeOffsetTexture(offsets, round_up = True):
     img.pixels = pixels
     
     # write to disk
-    img.filepath_raw = "/tmp/displacement.png"
+    img.filepath_raw = file_path
     img.file_format = 'PNG'
     #img.alpha_mode = 'CHANNEL_PACKED'
     #img.depth = 16
     img.save()
+
+def writeFBX(obj, file_path):
+    #duplicate object and remove all modifiers
+    
+    bpy.ops.export_scene.fbx(filepath=file_path,
+                             use_selection=True,
+                             global_scale=0.1,
+                             use_mesh_modifiers=True,
+                             object_types={'MESH'},
+                             bake_anim=False,
+                             axis_forward='Y',
+                             axis_up='Z')
+                             
             
 def assignVertexColors(obj, round_up = True):
-    col = obj.data.vertex_colors.active #obj.data.vertex_colors['Col']
+    if 'Col' not in obj.data.vertex_colors.keys():
+        obj.data.vertex_colors.new(name='Col')
+        
+    col = obj.data.vertex_colors['Col']
     polygons = obj.data.polygons
     vertices = obj.data.vertices
     
@@ -118,7 +137,7 @@ def writeDebugCurves(anim_tracks):
         scene.collection.objects.link(curveOB)
         
 
-def collectVertexOffsets(obj, scene = bpy.context.scene):  
+def collectVertexOffsets(obj, scene):  
     ref_verts = obj.data.vertices #reference vertex positions (unskinned)
     offset_matrix = []
     
@@ -150,7 +169,6 @@ def collectVertexOffsets(obj, scene = bpy.context.scene):
     # clean up objects
     for em in eval_meshes:
         bpy.data.meshes.remove(em)
-        
     
     return np.array(offset_matrix)
 
@@ -182,15 +200,17 @@ class VATExporter(bpy.types.Operator, ExportHelper):
     )
     
     def execute(self, context):
-        context = bpy.context
         scene = context.scene
         obj = context.selected_objects[0]
         
+        root_filepath = os.path.splitext(self.filepath)[0]
+        
         # Do all the things!!!
         assignVertexColors(obj)
-        anim_tracks = collectVertexOffsets(obj)
+        anim_tracks = collectVertexOffsets(obj, scene)
         #writeDebugCurves(anim_tracks)
-        writeOffsetTexture(anim_tracks, self.round_up)
+        writeOffsetTexture(anim_tracks, self.filepath, self.round_up)
+        writeFBX(obj, root_filepath + ".fbx")
         print("Bounds: " + str(aabb))
 
         return {'FINISHED'}
