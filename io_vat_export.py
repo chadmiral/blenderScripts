@@ -67,14 +67,27 @@ def writeOffsetTexture(offsets, file_path, round_up = True):
     # flatten pixels
     pixels = [chan for px in pixels for chan in px]
     
+    # Create new scene to set color depth on it
+    img_scene = bpy.data.scenes.new('vat_image_export')
+    settings = img_scene.render.image_settings
+    settings.color_depth = '16'
+    settings.file_format = 'PNG'
+
+    # Create new image and save with scene
+    img = bpy.data.images.new('vat_export', w, h)
     img.pixels = pixels
+    img.save_render(filepath=file_path, scene=img_scene)
     
+    """
+    # OLD
     # write to disk
+    img.pixels = pixels
     img.filepath_raw = file_path
     img.file_format = 'PNG'
     #img.alpha_mode = 'CHANNEL_PACKED'
     #img.depth = 16
     img.save()
+    """
 
 def writeFBX(obj, file_path):
     #duplicate object and remove all modifiers
@@ -118,12 +131,13 @@ def assignVertexColors(obj, round_up = True):
             col.data[l_ix].color = (x, x, x, 1)
             #print(str(v_ix) + ": " + str(x) + ", " + str(vertices[v_ix].co))
 
-def writeDebugCurves(anim_tracks):
-    for t in range(anim_tracks.shape[1]):
-        #print(t)
+def writeDebugCurves(scene, anim_tracks):
+    print("Track Count: " + str(anim_tracks.shape[0]))
+    for t in range(anim_tracks.shape[0]):
         curveData = bpy.data.curves.new('debug' + str(t), type='CURVE')
         curveData.dimensions = '3D'
-        curveData.resolution_u = 2
+        curveData.resolution_u = 1
+        curveData.resolution_v = 16
         
         polyline = curveData.splines.new('POLY')
         polyline.points.add(len(anim_tracks[t]) - 1)
@@ -131,9 +145,10 @@ def writeDebugCurves(anim_tracks):
             x,y,z = coord
             polyline.points[i].co = (x, y, z, 1)
             
-        curveOB = bpy.data.objects.new('debugCurve' + str(t), curveData)
+        curveOB = bpy.data.objects.new("debugCurve%2d" % t, curveData)
         curveData.bevel_depth = 0.01
         
+        #TODO: create a new collection for the debug curves
         scene.collection.objects.link(curveOB)
         
 
@@ -199,19 +214,33 @@ class VATExporter(bpy.types.Operator, ExportHelper):
         default=True,
     )
     
+    debug_curves: BoolProperty(
+        name="Debug Curves",
+        description="Create debug curve per vertex",
+        default=False,
+    )
+    
     def execute(self, context):
         scene = context.scene
-        obj = context.selected_objects[0]
-        
-        root_filepath = os.path.splitext(self.filepath)[0]
-        
-        # Do all the things!!!
-        assignVertexColors(obj)
-        anim_tracks = collectVertexOffsets(obj, scene)
-        #writeDebugCurves(anim_tracks)
-        writeOffsetTexture(anim_tracks, self.filepath, self.round_up)
-        writeFBX(obj, root_filepath + ".fbx")
-        print("Bounds: " + str(aabb))
+        if len(context.selected_objects) > 0:
+            obj = context.selected_objects[0]
+            
+            root_filepath = os.path.splitext(self.filepath)[0]
+            
+            # Do all the things!!!
+            assignVertexColors(obj)
+            anim_tracks = collectVertexOffsets(obj, scene)
+            
+            if self.debug_curves:
+                writeDebugCurves(scene, anim_tracks)
+            
+            writeOffsetTexture(anim_tracks, self.filepath, self.round_up)
+            writeFBX(obj, root_filepath + ".fbx")
+
+            # TODO: write bounds, frame data, etc. as .txt or .json file
+            print("Bounds: " + str(aabb))
+            print("Vertex Count: " + str(len(obj.data.vertices)))
+            #print("Animation Length: " + str())
 
         return {'FINISHED'}
     
